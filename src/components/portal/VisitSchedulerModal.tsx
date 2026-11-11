@@ -20,6 +20,7 @@ export function VisitSchedulerModal({ property, isOpen, onClose }: VisitSchedule
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -45,8 +46,11 @@ export function VisitSchedulerModal({ property, isOpen, onClose }: VisitSchedule
       notes: notes.trim() || undefined,
     });
 
-    if (res.success) {
+    if (res.success && res.data) {
       setStatus('success');
+      if (res.data.whatsappRedirectUrl) {
+        setWhatsappUrl(res.data.whatsappRedirectUrl);
+      }
     } else {
       setStatus('error');
       setErrorMessage(res.error || 'Ocurrió un error al agendar la cita.');
@@ -80,15 +84,28 @@ export function VisitSchedulerModal({ property, isOpen, onClose }: VisitSchedule
             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
             <h4 className="mt-3 text-base font-bold text-emerald-900">¡Visita Agendada con Éxito!</h4>
             <p className="mt-2 text-xs text-emerald-700 leading-relaxed">
-              Hemos registrado tu cita en el CRM para el <strong>{date} a las {time}</strong>. Te enviaremos confirmación y ubicación exacta por WhatsApp al <strong>{visitorPhone}</strong>.
+              Hemos registrado tu cita en el CRM para el <strong>{date} a las {time}</strong>. Se ha despachado la notificación automática al asesor.
             </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-5 w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-500 transition-colors"
-            >
-              Cerrar y Regresar
-            </button>
+
+            <div className="mt-4 flex flex-col gap-2">
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-colors"
+                >
+                  <span>Abrir WhatsApp con Asesor</span>
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cerrar Ventana
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">

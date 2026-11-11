@@ -134,15 +134,16 @@ export function BrokerageAgreementModal({
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white shadow hover:bg-slate-800 transition-colors"
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <a
+                href={`/convenios/${signedAgreement.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 py-3 text-xs font-bold text-white shadow hover:bg-emerald-600 transition-colors"
               >
                 <Download className="h-4 w-4" />
-                <span>Imprimir / Guardar Constancia PDF</span>
-              </button>
+                <span>Ver y Descargar Contrato Oficial PDF</span>
+              </a>
             </div>
           </div>
         ) : (

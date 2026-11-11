@@ -153,3 +153,37 @@ export async function getCaptadorDashboardDataAction(): Promise<
     };
   }
 }
+
+/**
+ * Consultar un Convenio de Mediación Mercantil con datos de la propiedad para vista imprimible / PDF
+ */
+export async function getBrokerageAgreementAction(idOrFolio: string) {
+  try {
+    const session = await getSessionContext();
+    const db = getTenantDb(session.tenantId);
+
+    const agreement = await db.legal.getAgreementByIdOrFolio(idOrFolio);
+    if (!agreement) {
+      return {
+        success: false,
+        error: 'Convenio no encontrado con el folio especificado.',
+      };
+    }
+
+    const property = await db.properties.findById(agreement.propertyId);
+
+    return {
+      success: true,
+      data: {
+        agreement,
+        property,
+      },
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Error al consultar convenio';
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}

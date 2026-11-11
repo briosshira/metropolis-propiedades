@@ -595,6 +595,7 @@ export interface TenantDbClient {
   };
   legal: {
     getAgreementByProperty: (propertyId: UUID) => Promise<BrokerageAgreement | null>;
+    getAgreementByIdOrFolio: (idOrFolio: string) => Promise<BrokerageAgreement | null>;
     signAgreement: (input: {
       propertyId: UUID;
       captadorUserId: UUID;
@@ -1236,6 +1237,18 @@ export function getTenantDb(context: TenantContext | UUID): TenantDbClient {
       async getAgreementByProperty(propertyId: UUID): Promise<BrokerageAgreement | null> {
         for (const agree of dbStore.agreements.values()) {
           if (agree.propertyId === propertyId && agree.tenantId === tenantId) {
+            return { ...agree };
+          }
+        }
+        return null;
+      },
+
+      async getAgreementByIdOrFolio(idOrFolio: string): Promise<BrokerageAgreement | null> {
+        for (const agree of dbStore.agreements.values()) {
+          if (
+            (agree.id === idOrFolio || agree.folio === idOrFolio) &&
+            agree.tenantId === tenantId
+          ) {
             return { ...agree };
           }
         }

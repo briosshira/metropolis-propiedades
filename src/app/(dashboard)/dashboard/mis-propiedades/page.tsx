@@ -17,6 +17,7 @@ import {
   Clock,
   ExternalLink,
   CreditCard,
+  Download,
 } from 'lucide-react';
 import { getCaptadorDashboardDataAction, type CaptadorDashboardPayload } from '@/actions/legal';
 import { BrokerageAgreementModal } from '@/components/portal/BrokerageAgreementModal';
@@ -298,6 +299,18 @@ export default function MisPropiedadesDashboardPage() {
                             <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
                             <span>{hasAgreement ? 'Ver Convenio Firmado' : 'Firmar Convenio'}</span>
                           </button>
+
+                          {hasAgreement && (
+                            <Link
+                              href={`/convenios/${agreement.id}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-sm"
+                              title="Descargar Contrato Oficial en PDF"
+                            >
+                              <Download className="h-3.5 w-3.5 text-emerald-700" />
+                              <span>PDF</span>
+                            </Link>
+                          )}
 
                           <Link
                             href={`/propiedades/${property.slug}`}
