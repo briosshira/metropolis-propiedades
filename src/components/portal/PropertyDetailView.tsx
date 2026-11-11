@@ -18,6 +18,7 @@ import {
 import type { PropertyWithMedia } from '@/types/crm';
 import { InquiryForm } from './InquiryForm';
 import { VisitSchedulerModal } from './VisitSchedulerModal';
+import { PropertyMap } from './PropertyMap';
 
 interface PropertyDetailViewProps {
   property: PropertyWithMedia;
@@ -228,6 +229,18 @@ export function PropertyDetailView({ property }: PropertyDetailViewProps) {
               </div>
             </div>
           )}
+
+          {/* Interactive Map Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900">Ubicación y Entorno</h2>
+              <span className="text-xs text-slate-500 font-semibold">{property.neighborhood ? `${property.neighborhood}, ` : ''}{property.city}, {property.state}</span>
+            </div>
+            <PropertyMap singleProperty={property} className="h-80 w-full" zoom={14} />
+            <p className="text-[11px] text-slate-400">
+              * Por seguridad del propietario y del captador, el mapa muestra el perímetro y cuadrante aproximado. Al confirmar tu cita presencial con el asesor asignado, te compartiremos las coordenadas y ruta exacta.
+            </p>
+          </div>
 
           {/* Affiliate Commission Transparency Callout */}
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-5 shadow-sm">
