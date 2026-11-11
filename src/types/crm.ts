@@ -128,8 +128,35 @@ export interface Property {
   exclusivityType?: 'EXCLUSIVE' | 'NON_EXCLUSIVE';
   folio?: string;
   featured: boolean;
+  // Campos multimedia avanzados: Recorridos 360 y Planos Arquitectónicos
+  virtualTourUrl?: string | null;
+  floorPlans?: Array<{ id: string; title: string; url: string; level?: string; area?: number }>;
+  // Campos de Apartado y Depósito de Garantía (Stripe / En Línea)
+  reservationDeposit?: number | null;
+  isReserved?: boolean;
+  reservedUntil?: string | null;
+  reservedBy?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PropertyReservation {
+  id: UUID;
+  tenantId: UUID;
+  propertyId: UUID;
+  propertyTitle: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'CONFIRMED' | 'REFUNDED' | 'EXPIRED';
+  stripePaymentIntentId?: string | null;
+  stripeSessionId?: string | null;
+  paymentMethod: 'STRIPE_CARD' | 'SPEI' | 'SIMULATION';
+  expiresAt: string; // ISO string 72 hours
+  createdAt: string;
+  folio: string;
 }
 
 export interface PropertyWithMedia extends Property {

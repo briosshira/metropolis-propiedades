@@ -104,6 +104,12 @@ CREATE TABLE IF NOT EXISTS properties (
     commission_rate NUMERIC(5, 2) NOT NULL DEFAULT 5.00, -- % total convenido (ej. 5%)
     captador_commission_pct NUMERIC(5, 2) NOT NULL DEFAULT 30.00, -- % del total para el captador
     featured BOOLEAN NOT NULL DEFAULT false,
+    virtual_tour_url TEXT,
+    floor_plans JSONB DEFAULT '[]'::jsonb,
+    reservation_deposit NUMERIC(14, 2),
+    is_reserved BOOLEAN NOT NULL DEFAULT false,
+    reserved_until TIMESTAMPTZ,
+    reserved_by VARCHAR(120),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_properties_tenant_slug UNIQUE (tenant_id, slug)
@@ -278,7 +284,39 @@ ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE commissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE property_visits ENABLE ROW LEVEL SECURITY;
 
--- Public read policy for APPROVED properties in Marketplace
+-- ----------------------------------------------------------------------------
+-- 9. PROPERTY RESERVATIONS (Apartados y Depósitos de Garantía en Línea / Stripe)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS property_reservations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    property_id UUID NOT NULL REFERENCES properties(id) ON DELETE RESTRICT,
+    client_name VARCHAR(120) NOT NULL,
+    client_email VARCHAR(255) NOT NULL,
+    client_phone VARCHAR(30) NOT NULL,
+    amount NUMERIC(14, 2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'MXN',
+    status VARCHAR(20) NOT NULL DEFAULT 'CONFIRMED' CHECK (status IN ('PENDING', 'CONFIRMED', 'REFUNDED', 'EXPIRED')),
+    payment_method VARCHAR(30) NOT NULL DEFAULT 'STRIPE_CARD' CHECK (payment_method IN ('STRIPE_CARD', 'SPEI', 'SIMULATION')),
+    stripe_session_id TEXT,
+    stripe_payment_intent_id TEXT,
+    folio VARCHAR(30) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservations_tenant ON property_reservations(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_property ON property_reservations(property_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_folio ON property_reservations(folio);
+
+ALTER TABLE property_reservations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_isolation_reservations ON property_reservations;
+CREATE POLICY tenant_isolation_reservations ON property_reservations
+    FOR ALL
+    USING (tenant_id = current_tenant_id())
+    WITH CHECK (tenant_id = current_tenant_id());
+
 DROP POLICY IF EXISTS public_read_approved_properties ON properties;
 CREATE POLICY public_read_approved_properties ON properties
     FOR SELECT

@@ -47,6 +47,8 @@ export default function PublicarPropiedadPage() {
   const [images, setImages] = useState<string[]>([
     'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
   ]);
+  const [virtualTourUrl, setVirtualTourUrl] = useState('');
+  const [floorPlanUrl, setFloorPlanUrl] = useState('');
 
   // Affiliate Calculator
   const commissionRate = 5.0; // 5% de comisión estándar
@@ -100,6 +102,17 @@ export default function PublicarPropiedadPage() {
       parkingSpaces: Number(parkingSpaces),
       features,
       images,
+      virtualTourUrl: virtualTourUrl.trim() || undefined,
+      floorPlans: floorPlanUrl.trim()
+        ? [
+            {
+              id: 'fp-uploaded-1',
+              title: 'Plano Arquitectónico General',
+              url: floorPlanUrl.trim(),
+              level: 'Distribución y cotas',
+            },
+          ]
+        : undefined,
       commissionRate,
       captadorCommissionPct: captadorSharePct,
     };
@@ -532,6 +545,45 @@ export default function PublicarPropiedadPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Multimedia Avanzada: Tour 360 y Planos */}
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Multimedia Inmersiva (Opcional)
+                  </h3>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Enlace de Recorrido Virtual 360° (Matterport, Kuula, YouTube 360)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://my.matterport.com/show/?m=..."
+                      value={virtualTourUrl}
+                      onChange={(e) => setVirtualTourUrl(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <span className="text-[10px] text-slate-400">
+                      Permite a los prospectos recorrer la propiedad de forma inmersiva desde su celular o computadora.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Enlace a Plano Arquitectónico o Deslinde Topográfico
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://.../plano-arquitectonico.jpg"
+                      value={floorPlanUrl}
+                      onChange={(e) => setFloorPlanUrl(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <span className="text-[10px] text-slate-400">
+                      Habilita el visor interactivo de planos con zoom y cotas de distribución.
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 

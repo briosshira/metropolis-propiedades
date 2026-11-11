@@ -35,6 +35,7 @@ import type {
   BrokerageAgreement,
   ExclusivityType,
   CaptadorPropertyStat,
+  PropertyReservation,
 } from '@/types/crm';
 import type {
   CreateContactInput,
@@ -65,6 +66,7 @@ interface DatabaseStore {
   visits: Map<UUID, PropertyVisit>;
   legalDocuments: Map<UUID, LegalDocument>;
   agreements: Map<UUID, BrokerageAgreement>;
+  reservations: Map<UUID, PropertyReservation>;
 }
 
 declare global {
@@ -85,6 +87,7 @@ function initializeDatabase(): DatabaseStore {
   const visits = new Map<UUID, PropertyVisit>();
   const legalDocuments = new Map<UUID, LegalDocument>();
   const agreements = new Map<UUID, BrokerageAgreement>();
+  const reservations = new Map<UUID, PropertyReservation>();
 
   // --------------------------------------------------------------------------
   // Seed Contacts
@@ -151,6 +154,17 @@ function initializeDatabase(): DatabaseStore {
     commissionRate: 6.0,
     captadorCommissionPct: 35.0, // El usuario captador gana el 35% de la comisión total
     featured: true,
+    virtualTourUrl: 'https://my.matterport.com/show/?m=2L6eWqV9X4k&play=1',
+    reservationDeposit: 15000,
+    floorPlans: [
+      {
+        id: 'fp-lot-14',
+        title: 'Levantamiento Topográfico y Deslinde Lote 14',
+        url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+        level: 'Polígono General (600 m²)',
+        area: 600,
+      },
+    ],
     createdAt: new Date(Date.now() - 86400000 * 12).toISOString(),
     updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
   };
@@ -183,6 +197,24 @@ function initializeDatabase(): DatabaseStore {
     commissionRate: 5.0,
     captadorCommissionPct: 30.0,
     featured: true,
+    virtualTourUrl: 'https://my.matterport.com/show/?m=JGPnGQ6hosj&play=1&brand=0&mls=1',
+    reservationDeposit: 35000,
+    floorPlans: [
+      {
+        id: 'fp-pb-merida',
+        title: 'Planta Baja: Área Social, Cocina & Alberca',
+        url: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80',
+        level: 'Nivel 1 (145 m²)',
+        area: 145,
+      },
+      {
+        id: 'fp-pa-merida',
+        title: 'Planta Alta: Master Suite & Recámaras',
+        url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80',
+        level: 'Nivel 2 (140 m²)',
+        area: 140,
+      },
+    ],
     createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
     updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
   };
@@ -215,6 +247,17 @@ function initializeDatabase(): DatabaseStore {
     commissionRate: 100.0, // 1 mes de renta
     captadorCommissionPct: 30.0,
     featured: true,
+    virtualTourUrl: 'https://my.matterport.com/show/?m=zE25gH71D7u&play=1',
+    reservationDeposit: 12000,
+    floorPlans: [
+      {
+        id: 'fp-dep-sp',
+        title: 'Distribución Arquitectónica Piso 8',
+        url: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=80',
+        level: 'Piso 8 (110 m²)',
+        area: 110,
+      },
+    ],
     createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
     updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
   };
@@ -492,6 +535,7 @@ function initializeDatabase(): DatabaseStore {
     visits,
     legalDocuments,
     agreements,
+    reservations,
   };
   globalThis.__CRM_DATABASE__ = store;
   return store;
@@ -613,6 +657,22 @@ export interface TenantDbClient {
     }) => Promise<LegalDocument>;
     verifyDocument: (documentId: UUID) => Promise<LegalDocument>;
     getCaptadorStats: (captadorUserId: UUID) => Promise<CaptadorPropertyStat[]>;
+  };
+  reservations: {
+    list: (propertyId?: UUID) => Promise<PropertyReservation[]>;
+    findById: (id: UUID) => Promise<PropertyReservation | null>;
+    findByFolio: (folio: string) => Promise<PropertyReservation | null>;
+    create: (input: {
+      propertyId: UUID;
+      clientName: string;
+      clientEmail: string;
+      clientPhone: string;
+      amount: number;
+      paymentMethod: 'STRIPE_CARD' | 'SPEI' | 'SIMULATION';
+      stripeSessionId?: string | null;
+      stripePaymentIntentId?: string | null;
+    }) => Promise<PropertyReservation>;
+    updateStatus: (id: UUID, status: 'PENDING' | 'CONFIRMED' | 'REFUNDED' | 'EXPIRED') => Promise<PropertyReservation>;
   };
 }
 
@@ -819,6 +879,9 @@ export function getTenantDb(context: TenantContext | UUID): TenantDbClient {
           commissionRate: input.commissionRate ?? 5.0,
           captadorCommissionPct: input.captadorCommissionPct ?? 30.0,
           featured: input.featured ?? false,
+          virtualTourUrl: input.virtualTourUrl || null,
+          floorPlans: input.floorPlans || [],
+          reservationDeposit: input.reservationDeposit || null,
           createdAt: now,
           updatedAt: now,
         };
@@ -1406,6 +1469,119 @@ export function getTenantDb(context: TenantContext | UUID): TenantDbClient {
         }
 
         return stats.sort((a, b) => new Date(b.property.createdAt).getTime() - new Date(a.property.createdAt).getTime());
+      },
+    },
+
+    reservations: {
+      async list(propertyId?: UUID): Promise<PropertyReservation[]> {
+        const results: PropertyReservation[] = [];
+        for (const res of dbStore.reservations.values()) {
+          if (res.tenantId !== tenantId) continue;
+          if (propertyId && res.propertyId !== propertyId) continue;
+          results.push({ ...res });
+        }
+        return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      },
+
+      async findById(id: UUID): Promise<PropertyReservation | null> {
+        const res = dbStore.reservations.get(id);
+        if (!res || res.tenantId !== tenantId) return null;
+        return { ...res };
+      },
+
+      async findByFolio(folio: string): Promise<PropertyReservation | null> {
+        for (const res of dbStore.reservations.values()) {
+          if (res.tenantId === tenantId && res.folio.toUpperCase() === folio.toUpperCase()) {
+            return { ...res };
+          }
+        }
+        return null;
+      },
+
+      async create(input: {
+        propertyId: UUID;
+        clientName: string;
+        clientEmail: string;
+        clientPhone: string;
+        amount: number;
+        paymentMethod: 'STRIPE_CARD' | 'SPEI' | 'SIMULATION';
+        stripeSessionId?: string | null;
+        stripePaymentIntentId?: string | null;
+      }): Promise<PropertyReservation> {
+        const prop = dbStore.properties.get(input.propertyId);
+        if (!prop || prop.tenantId !== tenantId) {
+          throw new Error('La propiedad no existe o no pertenece a este tenant.');
+        }
+
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 72 * 60 * 60 * 1000); // 72 horas de congelamiento
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        const folio = `RES-${now.getFullYear()}-${randomNum}`;
+
+        const reservation: PropertyReservation = {
+          id: crypto.randomUUID(),
+          tenantId,
+          propertyId: input.propertyId,
+          propertyTitle: prop.title,
+          clientName: input.clientName,
+          clientEmail: input.clientEmail,
+          clientPhone: input.clientPhone,
+          amount: input.amount,
+          currency: prop.currency,
+          status: 'CONFIRMED',
+          stripeSessionId: input.stripeSessionId || null,
+          stripePaymentIntentId: input.stripePaymentIntentId || null,
+          paymentMethod: input.paymentMethod,
+          expiresAt: expiresAt.toISOString(),
+          createdAt: now.toISOString(),
+          folio,
+        };
+
+        dbStore.reservations.set(reservation.id, reservation);
+
+        // Bloquear temporalmente la propiedad como apartada
+        const updatedProp: Property = {
+          ...prop,
+          isReserved: true,
+          reservedUntil: expiresAt.toISOString(),
+          reservedBy: input.clientName,
+          updatedAt: now.toISOString(),
+        };
+        dbStore.properties.set(prop.id, updatedProp);
+
+        return { ...reservation };
+      },
+
+      async updateStatus(
+        id: UUID,
+        status: 'PENDING' | 'CONFIRMED' | 'REFUNDED' | 'EXPIRED'
+      ): Promise<PropertyReservation> {
+        const res = dbStore.reservations.get(id);
+        if (!res || res.tenantId !== tenantId) {
+          throw new Error('Apartado no encontrado.');
+        }
+
+        const updated: PropertyReservation = {
+          ...res,
+          status,
+        };
+        dbStore.reservations.set(id, updated);
+
+        // Si se expira o reembolsa, liberar la propiedad
+        if (status === 'REFUNDED' || status === 'EXPIRED') {
+          const prop = dbStore.properties.get(res.propertyId);
+          if (prop) {
+            dbStore.properties.set(prop.id, {
+              ...prop,
+              isReserved: false,
+              reservedUntil: null,
+              reservedBy: null,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        return { ...updated };
       },
     },
   };

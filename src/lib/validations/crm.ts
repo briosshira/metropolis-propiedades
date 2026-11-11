@@ -131,6 +131,20 @@ export const createPropertySchema = z.object({
   commissionRate: z.number().min(0).max(100).default(5.0),
   captadorCommissionPct: z.number().min(0).max(100).default(30.0),
   featured: z.boolean().default(false),
+  virtualTourUrl: z.string().url('URL inválida').optional().nullable(),
+  floorPlans: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        url: z.string(),
+        level: z.string().optional(),
+        area: z.number().optional(),
+      })
+    )
+    .optional()
+    .nullable(),
+  reservationDeposit: z.number().positive().optional().nullable(),
   images: z.array(z.string().url('URL de imagen inválida')).default([]),
 });
 
@@ -178,6 +192,18 @@ export const createCommissionSchema = z.object({
   notes: z.string().trim().max(1000).optional().nullable(),
 });
 
+// ----------------------------------------------------------------------------
+// Apartados y Depósitos de Garantía en Línea (Stripe)
+// ----------------------------------------------------------------------------
+export const createReservationSchema = z.object({
+  propertyId: z.string().uuid('ID de propiedad requerido'),
+  clientName: z.string().trim().min(3, 'Nombre completo requerido').max(120),
+  clientEmail: z.string().trim().email('Correo electrónico válido requerido'),
+  clientPhone: z.string().trim().min(8, 'Teléfono requerido (mínimo 8 dígitos)').max(20),
+  amount: z.number().positive('El monto del depósito debe ser mayor a cero'),
+  paymentMethod: z.enum(['STRIPE_CARD', 'SPEI', 'SIMULATION']).default('STRIPE_CARD'),
+});
+
 export const updateCommissionStatusSchema = z.object({
   id: z.string().uuid(),
   target: z.enum(['captador', 'agent']),
@@ -195,3 +221,4 @@ export type UpdatePropertyInput = z.infer<typeof updatePropertySchema>;
 export type PublicInquiryInput = z.infer<typeof publicInquirySchema>;
 export type BookVisitInput = z.infer<typeof bookVisitSchema>;
 export type CreateCommissionInput = z.infer<typeof createCommissionSchema>;
+export type CreateReservationInput = z.infer<typeof createReservationSchema>;
