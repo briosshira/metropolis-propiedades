@@ -30,6 +30,11 @@ import type {
   CommissionStatus,
   PropertyVisit,
   VisitStatus,
+  LegalDocument,
+  LegalDocumentType,
+  BrokerageAgreement,
+  ExclusivityType,
+  CaptadorPropertyStat,
 } from '@/types/crm';
 import type {
   CreateContactInput,
@@ -58,6 +63,8 @@ interface DatabaseStore {
   propertyMedia: Map<UUID, PropertyMedia>;
   commissions: Map<UUID, Commission>;
   visits: Map<UUID, PropertyVisit>;
+  legalDocuments: Map<UUID, LegalDocument>;
+  agreements: Map<UUID, BrokerageAgreement>;
 }
 
 declare global {
@@ -76,6 +83,8 @@ function initializeDatabase(): DatabaseStore {
   const propertyMedia = new Map<UUID, PropertyMedia>();
   const commissions = new Map<UUID, Commission>();
   const visits = new Map<UUID, PropertyVisit>();
+  const legalDocuments = new Map<UUID, LegalDocument>();
+  const agreements = new Map<UUID, BrokerageAgreement>();
 
   // --------------------------------------------------------------------------
   // Seed Contacts
@@ -406,6 +415,74 @@ function initializeDatabase(): DatabaseStore {
 
   visits.set(visit1.id, visit1);
 
+  // --------------------------------------------------------------------------
+  // Seed Agreements (Convenios Digitales de Comisión Protegida)
+  // --------------------------------------------------------------------------
+  const agree1: BrokerageAgreement = {
+    id: crypto.randomUUID(),
+    folio: 'MET-2026-T89K1',
+    propertyId: prop1Id,
+    tenantId: DEFAULT_TENANT_ID,
+    captadorUserId: CAPTADOR_USER_ID,
+    exclusivityType: 'EXCLUSIVE',
+    commissionRate: 6.0,
+    captadorCommissionPct: 35.0,
+    signerName: 'Juan Afiliado',
+    signerEmail: 'afiliado@metropolis.com',
+    signerIp: '189.203.45.12',
+    signedAt: new Date(Date.now() - 86400000 * 12).toISOString(),
+    termsAccepted: true,
+  };
+
+  const agree2: BrokerageAgreement = {
+    id: crypto.randomUUID(),
+    folio: 'MET-2026-R44B7',
+    propertyId: prop2Id,
+    tenantId: DEFAULT_TENANT_ID,
+    captadorUserId: CAPTADOR_USER_ID,
+    exclusivityType: 'NON_EXCLUSIVE',
+    commissionRate: 5.0,
+    captadorCommissionPct: 30.0,
+    signerName: 'Juan Afiliado',
+    signerEmail: 'afiliado@metropolis.com',
+    signerIp: '189.203.45.12',
+    signedAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+    termsAccepted: true,
+  };
+
+  agreements.set(agree1.id, agree1);
+  agreements.set(agree2.id, agree2);
+
+  // --------------------------------------------------------------------------
+  // Seed Legal Documents
+  // --------------------------------------------------------------------------
+  const doc1: LegalDocument = {
+    id: crypto.randomUUID(),
+    propertyId: prop1Id,
+    tenantId: DEFAULT_TENANT_ID,
+    type: 'DEED',
+    url: 'https://cxzkbzchjtonqabjzjge.supabase.co/storage/v1/object/public/legal-documents/escritura-lote-14.pdf',
+    fileName: 'Escritura_Publica_Lote14_Encinos.pdf',
+    verified: true,
+    verifiedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+    createdAt: new Date(Date.now() - 86400000 * 11).toISOString(),
+  };
+
+  const doc2: LegalDocument = {
+    id: crypto.randomUUID(),
+    propertyId: prop1Id,
+    tenantId: DEFAULT_TENANT_ID,
+    type: 'TAX_RECEIPT',
+    url: 'https://cxzkbzchjtonqabjzjge.supabase.co/storage/v1/object/public/legal-documents/predial-2026.pdf',
+    fileName: 'Boleta_Predial_2026_Vigente.pdf',
+    verified: true,
+    verifiedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+    createdAt: new Date(Date.now() - 86400000 * 11).toISOString(),
+  };
+
+  legalDocuments.set(doc1.id, doc1);
+  legalDocuments.set(doc2.id, doc2);
+
   const store: DatabaseStore = {
     contacts,
     leads,
@@ -413,6 +490,8 @@ function initializeDatabase(): DatabaseStore {
     propertyMedia,
     commissions,
     visits,
+    legalDocuments,
+    agreements,
   };
   globalThis.__CRM_DATABASE__ = store;
   return store;
@@ -513,6 +592,26 @@ export interface TenantDbClient {
     list: (propertyId?: UUID) => Promise<PropertyVisit[]>;
     create: (input: BookVisitInput) => Promise<PropertyVisit>;
     updateStatus: (id: UUID, status: VisitStatus) => Promise<PropertyVisit>;
+  };
+  legal: {
+    getAgreementByProperty: (propertyId: UUID) => Promise<BrokerageAgreement | null>;
+    signAgreement: (input: {
+      propertyId: UUID;
+      captadorUserId: UUID;
+      exclusivityType: ExclusivityType;
+      signerName: string;
+      signerEmail: string;
+      signerIp: string;
+    }) => Promise<BrokerageAgreement>;
+    listDocuments: (propertyId: UUID) => Promise<LegalDocument[]>;
+    uploadDocument: (input: {
+      propertyId: UUID;
+      type: LegalDocumentType;
+      url: string;
+      fileName: string;
+    }) => Promise<LegalDocument>;
+    verifyDocument: (documentId: UUID) => Promise<LegalDocument>;
+    getCaptadorStats: (captadorUserId: UUID) => Promise<CaptadorPropertyStat[]>;
   };
 }
 
@@ -1130,6 +1229,170 @@ export function getTenantDb(context: TenantContext | UUID): TenantDbClient {
 
         dbStore.visits.set(id, updated);
         return { ...updated };
+      },
+    },
+
+    legal: {
+      async getAgreementByProperty(propertyId: UUID): Promise<BrokerageAgreement | null> {
+        for (const agree of dbStore.agreements.values()) {
+          if (agree.propertyId === propertyId && agree.tenantId === tenantId) {
+            return { ...agree };
+          }
+        }
+        return null;
+      },
+
+      async signAgreement(input: {
+        propertyId: UUID;
+        captadorUserId: UUID;
+        exclusivityType: ExclusivityType;
+        signerName: string;
+        signerEmail: string;
+        signerIp: string;
+      }): Promise<BrokerageAgreement> {
+        const prop = dbStore.properties.get(input.propertyId);
+        if (!prop || prop.tenantId !== tenantId) {
+          throw new Error('Propiedad no encontrada.');
+        }
+
+        // Commission rate & captador share based on exclusivity
+        const commissionRate = input.exclusivityType === 'EXCLUSIVE' ? 6.0 : 5.0;
+        const captadorCommissionPct = input.exclusivityType === 'EXCLUSIVE' ? 35.0 : 25.0;
+        const folioRandom = crypto.randomBytes(3).toString('hex').toUpperCase();
+        const folio = `MET-${new Date().getFullYear()}-${folioRandom}`;
+
+        const agreement: BrokerageAgreement = {
+          id: crypto.randomUUID(),
+          folio,
+          propertyId: input.propertyId,
+          tenantId,
+          captadorUserId: input.captadorUserId,
+          exclusivityType: input.exclusivityType,
+          commissionRate,
+          captadorCommissionPct,
+          signerName: input.signerName.trim(),
+          signerEmail: input.signerEmail.trim().toLowerCase(),
+          signerIp: input.signerIp,
+          signedAt: new Date().toISOString(),
+          termsAccepted: true,
+        };
+
+        dbStore.agreements.set(agreement.id, agreement);
+
+        // Update property with folio and exclusivity rates
+        prop.commissionRate = commissionRate;
+        prop.captadorCommissionPct = captadorCommissionPct;
+        prop.exclusivityType = input.exclusivityType;
+        prop.folio = folio;
+        dbStore.properties.set(prop.id, prop);
+
+        return { ...agreement };
+      },
+
+      async listDocuments(propertyId: UUID): Promise<LegalDocument[]> {
+        const results: LegalDocument[] = [];
+        for (const doc of dbStore.legalDocuments.values()) {
+          if (doc.propertyId === propertyId && doc.tenantId === tenantId) {
+            results.push({ ...doc });
+          }
+        }
+        return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      },
+
+      async uploadDocument(input: {
+        propertyId: UUID;
+        type: LegalDocumentType;
+        url: string;
+        fileName: string;
+      }): Promise<LegalDocument> {
+        const doc: LegalDocument = {
+          id: crypto.randomUUID(),
+          propertyId: input.propertyId,
+          tenantId,
+          type: input.type,
+          url: input.url,
+          fileName: input.fileName,
+          verified: false,
+          verifiedAt: null,
+          createdAt: new Date().toISOString(),
+        };
+
+        dbStore.legalDocuments.set(doc.id, doc);
+        return { ...doc };
+      },
+
+      async verifyDocument(documentId: UUID): Promise<LegalDocument> {
+        const doc = dbStore.legalDocuments.get(documentId);
+        if (!doc || doc.tenantId !== tenantId) {
+          throw new Error('Documento no encontrado.');
+        }
+
+        const updated: LegalDocument = {
+          ...doc,
+          verified: true,
+          verifiedAt: new Date().toISOString(),
+        };
+
+        dbStore.legalDocuments.set(documentId, updated);
+        return { ...updated };
+      },
+
+      async getCaptadorStats(captadorUserId: UUID): Promise<CaptadorPropertyStat[]> {
+        const stats: CaptadorPropertyStat[] = [];
+
+        for (const prop of dbStore.properties.values()) {
+          if (prop.tenantId !== tenantId || prop.captadorUserId !== captadorUserId) {
+            continue;
+          }
+
+          // Count leads and visits for this property
+          let leadsCount = 0;
+          let visitsCount = 0;
+
+          for (const lead of dbStore.leads.values()) {
+            if (lead.propertyId === prop.id) leadsCount++;
+          }
+
+          for (const visit of dbStore.visits.values()) {
+            if (visit.propertyId === prop.id) visitsCount++;
+          }
+
+          // Find agreement
+          let agreement: BrokerageAgreement | null = null;
+          for (const ag of dbStore.agreements.values()) {
+            if (ag.propertyId === prop.id) {
+              agreement = { ...ag };
+              break;
+            }
+          }
+
+          // Find legal documents
+          const docs: LegalDocument[] = [];
+          for (const doc of dbStore.legalDocuments.values()) {
+            if (doc.propertyId === prop.id) {
+              docs.push({ ...doc });
+            }
+          }
+
+          // Simulación de vistas y clics de WhatsApp basada en leads
+          const views = Math.max(140, leadsCount * 35 + 85);
+          const whatsappClicks = Math.max(leadsCount, Math.floor(views * 0.08));
+
+          stats.push({
+            property: {
+              ...prop,
+              media: getMediaForProperty(prop.id),
+            },
+            views,
+            whatsappClicks,
+            visitsCount,
+            leadsCount,
+            agreement,
+            legalDocuments: docs,
+          });
+        }
+
+        return stats.sort((a, b) => new Date(b.property.createdAt).getTime() - new Date(a.property.createdAt).getTime());
       },
     },
   };

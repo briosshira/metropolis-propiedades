@@ -115,6 +115,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </p>
               <div className="space-y-1">
                 <Link
+                  href="/dashboard/mis-propiedades"
+                  className="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100/70 transition group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600 transition" />
+                    <span className="font-bold">Panel de Captador</span>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-900 font-bold">
+                    Mis Ganancias
+                  </span>
+                </Link>
+
+                <Link
                   href="/dashboard/propiedades"
                   className="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg text-slate-700 hover:text-emerald-700 hover:bg-emerald-50/60 transition group"
                 >

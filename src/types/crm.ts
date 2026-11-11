@@ -125,6 +125,8 @@ export interface Property {
   assignedAgentId?: UUID | null; // Asesor interno a cargo
   commissionRate: number; // Ej. 5.00% comisión total acordada
   captadorCommissionPct: number; // Ej. 30.00% del total va para el captador
+  exclusivityType?: 'EXCLUSIVE' | 'NON_EXCLUSIVE';
+  folio?: string;
   featured: boolean;
   createdAt: string;
   updatedAt: string;
@@ -235,4 +237,53 @@ export interface LeadFilterParams {
   maxVal?: number;
   page?: number;
   pageSize?: number;
+}
+
+// ----------------------------------------------------------------------------
+// Documentos Legales & Convenios Digitales de Corretaje
+// ----------------------------------------------------------------------------
+export type ExclusivityType = 'EXCLUSIVE' | 'NON_EXCLUSIVE';
+
+export type LegalDocumentType =
+  | 'DEED' // Título / Escritura Pública
+  | 'TAX_RECEIPT' // Boleta Predial Vigente
+  | 'ID_CARD' // Identificación Oficial (INE / Pasaporte)
+  | 'BROKERAGE_AGREEMENT'; // Convenio de Mediación Mercantil
+
+export interface LegalDocument {
+  id: UUID;
+  propertyId: UUID;
+  tenantId: UUID;
+  type: LegalDocumentType;
+  url: string;
+  fileName: string;
+  verified: boolean;
+  verifiedAt?: string | null;
+  createdAt: string;
+}
+
+export interface BrokerageAgreement {
+  id: UUID;
+  folio: string; // Ej. 'MET-2026-X84J9'
+  propertyId: UUID;
+  tenantId: UUID;
+  captadorUserId: UUID;
+  exclusivityType: ExclusivityType;
+  commissionRate: number; // Ej. 6% exclusiva o 5% no exclusiva
+  captadorCommissionPct: number; // Ej. 35% o 25%
+  signerName: string;
+  signerEmail: string;
+  signerIp: string;
+  signedAt: string;
+  termsAccepted: boolean;
+}
+
+export interface CaptadorPropertyStat {
+  property: PropertyWithMedia;
+  views: number;
+  whatsappClicks: number;
+  visitsCount: number;
+  leadsCount: number;
+  agreement?: BrokerageAgreement | null;
+  legalDocuments: LegalDocument[];
 }
