@@ -14,6 +14,7 @@ import {
   Calendar,
   ExternalLink,
   PlusCircle,
+  BarChart3,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -158,6 +159,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <Calendar className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition" />
                     <span>Citas y Visitas</span>
                   </div>
+                </Link>
+
+                <Link
+                  href="/dashboard/analytics"
+                  className="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg text-slate-700 hover:text-indigo-700 hover:bg-indigo-50/60 transition group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <BarChart3 className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition" />
+                    <span>Analytics & Métricas</span>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold">
+                    KPIs
+                  </span>
                 </Link>
               </div>
             </div>
