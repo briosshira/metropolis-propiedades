@@ -14,9 +14,11 @@ import {
   Users,
   Layers,
   Sparkles,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Contact, LeadPriority, LeadStage, LeadWithContact } from '@/types/crm';
 import { formatCurrency } from '@/styles/theme';
+import { exportToCsv } from '@/lib/export/excel';
 import KanbanBoard from './KanbanBoard';
 import LeadsTable from './LeadsTable';
 import ContactsTable from './ContactsTable';
@@ -111,6 +113,44 @@ export default function LeadsView({
     const params = new URLSearchParams(searchParams.toString());
     params.set('view', view);
     router.push(`/leads?${params.toString()}`);
+  };
+
+  const handleExportExcel = () => {
+    const headers = [
+      'Título Oportunidad',
+      'Cliente / Contacto',
+      'Teléfono',
+      'Email',
+      'Empresa',
+      'Etapa Embudo',
+      'Prioridad',
+      'Valor Negocio',
+      'Moneda Original',
+      `Valor (${displayCurrency})`,
+      'Notas',
+      'Fecha Creación',
+    ];
+
+    const rows = filteredLeads.map((l) => [
+      l.title,
+      `${l.contact?.firstName || ''} ${l.contact?.lastName || ''}`.trim(),
+      l.contact?.phone || '',
+      l.contact?.email || '',
+      l.contact?.company || '',
+      l.stage,
+      l.priority,
+      Number(l.value) || 0,
+      l.currency || 'MXN',
+      toDisplayCurrency(Number(l.value) || 0, l.currency),
+      l.notes || '',
+      l.createdAt ? new Date(l.createdAt).toLocaleDateString('es-MX') : '',
+    ]);
+
+    exportToCsv(
+      `Reporte_Prospectos_Metropolis_${displayCurrency}_${new Date().toISOString().split('T')[0]}`,
+      headers,
+      rows
+    );
   };
 
   return (
@@ -280,6 +320,19 @@ export default function LeadsView({
                 </select>
               </div>
             </>
+          )}
+
+          {/* Export to Excel Button */}
+          {currentView !== 'contacts' && (
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:text-emerald-800 hover:border-emerald-500 transition shadow-sm"
+              title="Descargar prospectos filtrados en formato CSV para Excel"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <span>Exportar Excel</span>
+            </button>
           )}
 
           {/* New Lead Modal Trigger */}

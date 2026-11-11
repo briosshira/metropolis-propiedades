@@ -10,8 +10,10 @@ import {
   ShieldCheck,
   Building2,
   DollarSign,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { updateCommissionStatusAction } from '@/actions/commissions';
+import { exportToCsv } from '@/lib/export/excel';
 import type { CommissionWithDetails, CommissionStatus } from '@/types/crm';
 
 interface ComisionesViewProps {
@@ -75,9 +77,49 @@ export function ComisionesView({ initialCommissions }: ComisionesViewProps) {
     }
   };
 
+  const handleExportExcel = () => {
+    const headers = [
+      'Inmueble / Referencia',
+      'ID Propiedad',
+      'Valor de Cierre (MXN)',
+      `Valor de Cierre (${currency})`,
+      `Comisión Total Cobrada (${currency})`,
+      `Comisión Captador / Afiliado (${currency})`,
+      'Nombre del Captador',
+      'Estatus Pago Captador',
+      `Comisión Asesor Interno (${currency})`,
+      'Nombre del Asesor',
+      'Estatus Pago Asesor',
+      `Margen Retenido Agencia (${currency})`,
+      'Fecha',
+    ];
+
+    const rows = commissions.map((c) => [
+      c.propertyTitle,
+      c.propertyId,
+      c.dealValue,
+      convertAmount(c.dealValue),
+      convertAmount(c.totalCommissionAmount),
+      convertAmount(c.captadorAmount),
+      c.captadorName || 'Afiliado',
+      c.captadorStatus === 'PAID' ? 'PAGADO (SPEI)' : c.captadorStatus === 'APPROVED' ? 'APROBADO' : 'PENDIENTE',
+      convertAmount(c.agentAmount),
+      c.agentName || 'Asesor Interno',
+      c.agentStatus === 'PAID' ? 'PAGADO' : 'PENDIENTE',
+      convertAmount(Math.max(0, c.totalCommissionAmount - c.captadorAmount - c.agentAmount)),
+      c.createdAt ? new Date(c.createdAt).toLocaleDateString('es-MX') : new Date().toLocaleDateString('es-MX'),
+    ]);
+
+    exportToCsv(
+      `Reporte_Comisiones_Metropolis_${currency}_${new Date().toISOString().split('T')[0]}`,
+      headers,
+      rows
+    );
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header with Currency Selector */}
+      {/* Header with Currency Selector & Export */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -89,34 +131,43 @@ export function ComisionesView({ initialCommissions }: ComisionesViewProps) {
           </p>
         </div>
 
-        {/* Currency Switcher */}
-        <div className="flex items-center gap-2 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
-          <span className="text-[11px] font-bold text-slate-500 px-2 flex items-center gap-1">
-            <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
-            Moneda:
-          </span>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Export Button */}
           <button
             type="button"
-            onClick={() => setCurrency('MXN')}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
-              currency === 'MXN'
-                ? 'bg-emerald-700 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 bg-slate-50'
-            }`}
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-2 rounded-2xl bg-white border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:border-emerald-500 hover:text-emerald-800 transition-all cursor-pointer"
+            title="Descargar reporte completo en formato CSV compatible con Microsoft Excel"
           >
-            🇲🇽 MXN
+            <FileSpreadsheet className="h-4 w-4 text-emerald-700" />
+            <span>Exportar Excel</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setCurrency('USD')}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
-              currency === 'USD'
-                ? 'bg-emerald-700 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 bg-slate-50'
-            }`}
-          >
-            🇺🇸 USD
-          </button>
+
+          {/* Currency Switcher */}
+          <div className="flex items-center gap-1.5 bg-white rounded-2xl border border-slate-200 p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setCurrency('MXN')}
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                currency === 'MXN'
+                  ? 'bg-emerald-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 bg-slate-50'
+              }`}
+            >
+              🇲🇽 MXN
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrency('USD')}
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                currency === 'USD'
+                  ? 'bg-emerald-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 bg-slate-50'
+              }`}
+            >
+              🇺🇸 USD
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getSessionContext, getTenantDb } from '@/db/client';
 import { updatePropertyStatusAction } from '@/actions/properties';
+import { ExportPropertiesButton } from '@/components/dashboard/ExportPropertiesButton';
 import {
   Building2,
   CheckCircle,
@@ -38,14 +39,18 @@ export default async function DashboardPropiedadesPage() {
           </p>
         </div>
 
-        <Link
-          href="/publicar"
-          target="_blank"
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-500 transition-colors"
-        >
-          <PlusCircle className="h-4 w-4" />
-          <span>Registrar Inmueble</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <ExportPropertiesButton properties={properties} />
+
+          <Link
+            href="/publicar"
+            target="_blank"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-500 transition-colors"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Registrar Inmueble</span>
+          </Link>
+        </div>
       </div>
 
       {/* KPI Stats */}
