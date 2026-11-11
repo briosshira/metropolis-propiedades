@@ -67,9 +67,9 @@ export function PropertyMap({
 
       mapInstanceRef.current = map;
 
-      // Add OpenStreetMap CartoDB Positron / OSM tiles for clean modern UI
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      // Standard free OpenStreetMap tile layer (no API key required)
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map);
 
