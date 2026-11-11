@@ -44,6 +44,17 @@ export default function LeadsView({
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<string>('ALL');
+  const [displayCurrency, setDisplayCurrency] = useState<'MXN' | 'USD'>('MXN');
+
+  const EXCHANGE_RATE = 20.0;
+
+  const toDisplayCurrency = (value: number, origCurrency?: string) => {
+    const orig = (origCurrency || 'MXN').toUpperCase();
+    if (orig === displayCurrency) return value;
+    if (orig === 'USD' && displayCurrency === 'MXN') return value * EXCHANGE_RATE;
+    if (orig === 'MXN' && displayCurrency === 'USD') return value / EXCHANGE_RATE;
+    return value;
+  };
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
@@ -73,16 +84,16 @@ export default function LeadsView({
     });
   }, [initialLeads, searchQuery, selectedPriority]);
 
-  // High-level CRM Metrics Calculations
+  // High-level CRM Metrics Calculations in Selected Currency
   const metrics = useMemo(() => {
     const totalCount = initialLeads.length;
     const totalPipelineValue = initialLeads.reduce(
-      (sum, l) => sum + (Number(l.value) || 0),
+      (sum, l) => sum + toDisplayCurrency(Number(l.value) || 0, l.currency),
       0
     );
     const wonDeals = initialLeads.filter((l) => l.stage === 'WON');
     const wonValue = wonDeals.reduce(
-      (sum, l) => sum + (Number(l.value) || 0),
+      (sum, l) => sum + toDisplayCurrency(Number(l.value) || 0, l.currency),
       0
     );
     const avgTicket = totalCount > 0 ? totalPipelineValue / totalCount : 0;
@@ -94,7 +105,7 @@ export default function LeadsView({
       wonValue,
       avgTicket,
     };
-  }, [initialLeads]);
+  }, [initialLeads, displayCurrency]);
 
   const setView = (view: 'kanban' | 'table' | 'contacts') => {
     const params = new URLSearchParams(searchParams.toString());
@@ -109,12 +120,12 @@ export default function LeadsView({
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Pipeline Total
+              Pipeline Total ({displayCurrency})
             </span>
             <DollarSign className="h-4 w-4 text-indigo-600" />
           </div>
           <div className="text-xl font-black text-slate-900 font-mono">
-            {formatCurrency(metrics.totalPipelineValue, 'USD')}
+            {formatCurrency(metrics.totalPipelineValue, displayCurrency)}
           </div>
           <span className="text-[10px] text-slate-400 font-medium">
             En {metrics.totalCount} oportunidades activas
@@ -124,12 +135,12 @@ export default function LeadsView({
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Tratos Cerrados (WON)
+              Tratos Cerrados ({displayCurrency})
             </span>
             <Award className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="text-xl font-black text-emerald-600 font-mono">
-            {formatCurrency(metrics.wonValue, 'USD')}
+            {formatCurrency(metrics.wonValue, displayCurrency)}
           </div>
           <span className="text-[10px] text-slate-400 font-medium">
             {metrics.wonDealsCount} tratos exitosos en firme
@@ -139,12 +150,12 @@ export default function LeadsView({
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Ticket Promedio
+              Ticket Promedio ({displayCurrency})
             </span>
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </div>
           <div className="text-xl font-black text-slate-900 font-mono">
-            {formatCurrency(metrics.avgTicket, 'USD')}
+            {formatCurrency(metrics.avgTicket, displayCurrency)}
           </div>
           <span className="text-[10px] text-slate-400 font-medium">
             Por prospecto registrado
@@ -225,6 +236,32 @@ export default function LeadsView({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
                 />
+              </div>
+
+              {/* Currency Selector */}
+              <div className="flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setDisplayCurrency('MXN')}
+                  className={`px-2 py-1 rounded-md transition-all ${
+                    displayCurrency === 'MXN'
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  🇲🇽 MXN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisplayCurrency('USD')}
+                  className={`px-2 py-1 rounded-md transition-all ${
+                    displayCurrency === 'USD'
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  🇺🇸 USD
+                </button>
               </div>
 
               {/* Priority filter */}

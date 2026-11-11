@@ -98,8 +98,16 @@ export function PropertyMap({
           dashArray: '6, 8',
         }).addTo(map);
 
+        const formatPriceBadge = (price: number, curr: string) => {
+          const prefix = curr.toUpperCase() === 'USD' ? 'US$' : '$';
+          if (price >= 1_000_000) {
+            return `${prefix}${(price / 1_000_000).toFixed(1)}M`;
+          }
+          return `${prefix}${(price / 1_000).toFixed(0)}k`;
+        };
+
         const marker = L.marker(initialCenter, {
-          icon: createCustomIcon(`$${(singleProperty.price / 1000).toLocaleString('es-MX', { maximumFractionDigits: 0 })}k`),
+          icon: createCustomIcon(formatPriceBadge(singleProperty.price, singleProperty.currency)),
         }).addTo(map);
 
         marker.bindPopup(`
@@ -126,8 +134,16 @@ export function PropertyMap({
 
           const cover = prop.media[0]?.url || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=300&q=80';
 
+          const formatPriceBadge = (price: number, curr: string) => {
+            const prefix = curr.toUpperCase() === 'USD' ? 'US$' : '$';
+            if (price >= 1_000_000) {
+              return `${prefix}${(price / 1_000_000).toFixed(1)}M`;
+            }
+            return `${prefix}${(price / 1_000).toFixed(0)}k`;
+          };
+
           const marker = L.marker(coords, {
-            icon: createCustomIcon(`$${(prop.price / 1000).toLocaleString('es-MX', { maximumFractionDigits: 0 })}k`),
+            icon: createCustomIcon(formatPriceBadge(prop.price, prop.currency)),
           }).addTo(map);
 
           marker.bindPopup(`
