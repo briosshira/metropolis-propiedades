@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/portal/Navbar';
 import { submitPropertyForReviewAction } from '@/actions/properties';
+import { FileUpload, type UploadedFileItem } from '@/components/ui/FileUpload';
 import {
   Sparkles,
   DollarSign,
@@ -458,45 +459,77 @@ export default function PublicarPropiedadPage() {
                 </div>
               </div>
 
-              {/* Fotos */}
-              <div className="pt-2">
-                <label className="block text-xs font-semibold text-slate-700">Fotografías del Inmueble (URL)</label>
-                <div className="mt-1 flex gap-2">
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddImage}
-                    className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 transition-colors shrink-0"
-                  >
-                    Añadir Foto
-                  </button>
+              {/* Fotos con Carga Real a Supabase Storage */}
+              <div className="pt-2 space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-800 mb-1">
+                    Fotografías del Inmueble (Alta Resolución)
+                  </label>
+                  <p className="text-[11px] text-slate-500 mb-3">
+                    Sube las fotos reales de tu propiedad directamente a nuestro servidor de almacenamiento seguro o añade URLs.
+                  </p>
+                </div>
+
+                <FileUpload
+                  bucket="properties-media"
+                  folder="properties"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  maxFiles={12}
+                  maxSizeMB={10}
+                  title="Arrastra o selecciona las fotos de tu propiedad"
+                  subtitle="Sube hasta 12 imágenes (JPG, PNG, WebP de hasta 10MB c/u)"
+                  onUploadSuccess={(uploaded) => {
+                    const newUrls = uploaded.map((u) => u.url);
+                    setImages((prev) => Array.from(new Set([...prev, ...newUrls])));
+                  }}
+                />
+
+                {/* Alternativa: Añadir URL externa */}
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-[11px] font-medium text-slate-500">¿Tienes un enlace directo a una imagen?</span>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/..."
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddImage}
+                      className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 transition-colors shrink-0"
+                    >
+                      Añadir URL
+                    </button>
+                  </div>
                 </div>
 
                 {images.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {images.map((url, i) => (
-                      <div key={i} className="relative aspect-[16/10] rounded-xl overflow-hidden bg-slate-100 border">
-                        <img src={url} alt={`foto ${i}`} className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setImages(images.filter((_, idx) => idx !== i))}
-                          className="absolute top-1.5 right-1.5 rounded-full bg-black/60 p-1 text-white hover:bg-red-600 transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                        {i === 0 && (
-                          <span className="absolute bottom-1.5 left-1.5 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                            Portada
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                  <div className="pt-2">
+                    <p className="text-xs font-bold text-slate-700 mb-2">
+                      Fotos listas para publicar ({images.length}):
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {images.map((url, i) => (
+                        <div key={i} className="relative aspect-[16/10] rounded-xl overflow-hidden bg-slate-100 border shadow-sm group">
+                          <img src={url} alt={`foto ${i}`} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                          <button
+                            type="button"
+                            onClick={() => setImages(images.filter((_, idx) => idx !== i))}
+                            className="absolute top-1.5 right-1.5 rounded-full bg-slate-900/80 p-1 text-white hover:bg-red-600 transition-colors"
+                            title="Eliminar foto"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                          {i === 0 && (
+                            <span className="absolute bottom-1.5 left-1.5 rounded-md bg-emerald-700 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                              Portada Principal
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

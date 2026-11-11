@@ -11,6 +11,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { uploadLegalDocumentAction } from '@/actions/legal';
+import { FileUpload, type UploadedFileItem } from '@/components/ui/FileUpload';
 import type { PropertyWithMedia, LegalDocumentType, LegalDocument } from '@/types/crm';
 
 interface DocumentUploadModalProps {
@@ -29,8 +30,6 @@ export function DocumentUploadModal({
   onDocumentUploaded,
 }: DocumentUploadModalProps) {
   const [docType, setDocType] = useState<LegalDocumentType>('DEED');
-  const [fileName, setFileName] = useState('');
-  const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -44,35 +43,34 @@ export function DocumentUploadModal({
     BROKERAGE_AGREEMENT: 'Contrato de Mediación Firmado',
   };
 
-  const handleSimulateUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUploadComplete = async (uploadedFiles: UploadedFileItem[]) => {
+    if (uploadedFiles.length === 0) return;
+    const latestFile = uploadedFiles[uploadedFiles.length - 1];
+
     setLoading(true);
     setErrorMessage('');
     setSuccessMsg('');
 
-    // Prepara URL segura en Supabase Storage (bucket legal-documents)
-    const simulatedFileName =
-      fileName.trim() || `${docType.toLowerCase()}_${property.id.slice(0, 8)}.pdf`;
-    const simulatedStorageUrl =
-      fileUrl.trim() ||
-      `https://cxzkbzchjtonqabjzjge.supabase.co/storage/v1/object/authenticated/legal-documents/${simulatedFileName}`;
+    try {
+      const res = await uploadLegalDocumentAction(
+        property.id,
+        docType,
+        latestFile.name,
+        latestFile.url
+      );
 
-    const res = await uploadLegalDocumentAction(
-      property.id,
-      docType,
-      simulatedFileName,
-      simulatedStorageUrl
-    );
+      setLoading(false);
 
-    setLoading(false);
-
-    if (res.success) {
-      setSuccessMsg(`Documento "${simulatedFileName}" cargado con éxito en el expediente legal.`);
-      setFileName('');
-      setFileUrl('');
-      if (onDocumentUploaded) onDocumentUploaded();
-    } else {
-      setErrorMessage(res.error || 'Error al cargar el documento.');
+      if (res.success) {
+        setSuccessMsg(`Documento "${latestFile.name}" guardado exitosamente en el expediente notarial.`);
+        if (onDocumentUploaded) onDocumentUploaded();
+      } else {
+        setErrorMessage(res.error || 'Error al vincular el documento con el expediente.');
+      }
+    } catch (err: unknown) {
+      setLoading(false);
+      const msg = err instanceof Error ? err.message : 'Error inesperado';
+      setErrorMessage(msg);
     }
   };
 
@@ -105,7 +103,7 @@ export function DocumentUploadModal({
           </h4>
 
           {existingDocuments.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {existingDocuments.map((doc) => (
                 <div
                   key={doc.id}
@@ -142,8 +140,8 @@ export function DocumentUploadModal({
         </div>
 
         {/* Upload Form */}
-        <form onSubmit={handleSimulateUpload} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
-          <h4 className="text-xs font-bold text-slate-900">Subir Nuevo Documento</h4>
+        <div className="mt-6 space-y-4 border-t border-slate-100 pt-5">
+          <h4 className="text-xs font-bold text-slate-900">Subir Nuevo Documento al Expediente</h4>
 
           {successMsg && (
             <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-800 border border-emerald-200">
@@ -160,58 +158,40 @@ export function DocumentUploadModal({
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Tipo de Documento *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Tipo de Documento a Cargar *</label>
             <select
               value={docType}
               onChange={(e) => setDocType(e.target.value as LegalDocumentType)}
-              className="mt-1 w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
+              className="w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
             >
               <option value="DEED">Escrituras Públicas / Título de Propiedad</option>
               <option value="TAX_RECEIPT">Boleta Predial Vigente</option>
               <option value="ID_CARD">Identificación Oficial (INE / Pasaporte)</option>
+              <option value="BROKERAGE_AGREEMENT">Convenio de Mediación Mercantil Firmado</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700">Nombre del Archivo *</label>
-            <input
-              type="text"
-              required
-              placeholder="Ej. Escritura_Lote14_Completa.pdf"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
+          <FileUpload
+            bucket="legal-documents"
+            folder={`property_${property.id.slice(0, 8)}`}
+            accept="application/pdf,image/jpeg,image/png"
+            maxFiles={1}
+            maxSizeMB={15}
+            title={`Arrastra o selecciona el archivo para: ${typeLabels[docType]}`}
+            subtitle="Admite archivos PDF o imágenes (JPG, PNG) de hasta 15MB protegidos con encriptación"
+            onUploadSuccess={handleUploadComplete}
+          />
 
-          <div className="rounded-2xl border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer">
-            <FileUp className="mx-auto h-8 w-8 text-slate-400" />
-            <span className="mt-2 block text-xs font-semibold text-slate-700">
-              Selecciona o arrastra el archivo PDF / Imagen
-            </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">
-              Tamaño máximo 25 MB • Encriptación AES-256 en Supabase Storage
-            </span>
-          </div>
-
-          <div className="pt-2 flex gap-3">
+          <div className="pt-2 flex justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="w-1/3 rounded-xl border border-slate-200 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              className="rounded-xl border border-slate-200 px-5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
             >
-              Cerrar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-2/3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500 disabled:opacity-50 transition-colors"
-            >
-              <FileUp className="h-4 w-4" />
-              <span>{loading ? 'Subiendo...' : 'Guardar en Expediente'}</span>
+              Finalizar y Cerrar
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
