@@ -119,9 +119,11 @@ export default function LoginPage() {
     await switchDemoRoleAction(role);
     setLoading(false);
     if (role === 'captador') {
-      router.push('/dashboard/mis-propiedades');
+      window.location.href = '/dashboard/mis-propiedades';
+    } else if (role === 'agent') {
+      window.location.href = '/leads?view=kanban';
     } else {
-      router.push('/leads');
+      window.location.href = '/dashboard/analytics';
     }
   };
 
@@ -216,28 +218,28 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleQuickSwitch('captador')}
               disabled={loading}
-              className="rounded-xl border border-emerald-300 bg-white p-2 text-center font-bold text-emerald-800 shadow-sm hover:bg-emerald-100/50 transition-colors"
+              className="rounded-xl border border-emerald-300 bg-white p-2.5 text-center font-bold text-emerald-800 shadow-sm hover:bg-emerald-100/50 transition-colors"
             >
-              <span className="block text-[10px] text-slate-500 font-normal">Afiliado</span>
-              Captador
+              <span className="block text-[10px] text-slate-500 font-normal">🌟 Afiliado</span>
+              Captador (Juan)
             </button>
             <button
               type="button"
               onClick={() => handleQuickSwitch('agent')}
               disabled={loading}
-              className="rounded-xl border border-emerald-300 bg-white p-2 text-center font-bold text-indigo-800 shadow-sm hover:bg-indigo-50 transition-colors"
+              className="rounded-xl border border-indigo-300 bg-white p-2.5 text-center font-bold text-indigo-800 shadow-sm hover:bg-indigo-50 transition-colors"
             >
-              <span className="block text-[10px] text-slate-500 font-normal">Ventas</span>
-              Asesor
+              <span className="block text-[10px] text-slate-500 font-normal">💼 Ventas</span>
+              Asesor (Lucía)
             </button>
             <button
               type="button"
               onClick={() => handleQuickSwitch('owner')}
               disabled={loading}
-              className="rounded-xl border border-emerald-300 bg-white p-2 text-center font-bold text-slate-900 shadow-sm hover:bg-slate-100 transition-colors"
+              className="rounded-xl border border-slate-300 bg-white p-2.5 text-center font-bold text-slate-900 shadow-sm hover:bg-slate-100 transition-colors"
             >
-              <span className="block text-[10px] text-slate-500 font-normal">Control</span>
-              Admin
+              <span className="block text-[10px] text-slate-500 font-normal">👑 Dirección</span>
+              Admin (Carlos)
             </button>
           </div>
         </div>

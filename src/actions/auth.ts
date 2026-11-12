@@ -16,16 +16,23 @@ import type { ActionResponse, UserRole } from '@/types/crm';
  */
 export async function switchDemoRoleAction(
   role: 'owner' | 'agent' | 'captador'
-): Promise<ActionResponse<{ role: UserRole; userId: string }>> {
+): Promise<ActionResponse<{ role: UserRole; userId: string; redirectUrl: string }>> {
   const cookieStore = await cookies();
 
   let targetUserId = DEFAULT_USER_ID;
-  if (role === 'agent') targetUserId = AGENT_USER_ID;
-  if (role === 'captador') targetUserId = CAPTADOR_USER_ID;
+  let destination = '/dashboard/analytics';
 
-  cookieStore.set('tenant_id', DEFAULT_TENANT_ID, { path: '/' });
-  cookieStore.set('user_id', targetUserId, { path: '/' });
-  cookieStore.set('user_role', role, { path: '/' });
+  if (role === 'agent') {
+    targetUserId = AGENT_USER_ID;
+    destination = '/leads?view=kanban';
+  } else if (role === 'captador') {
+    targetUserId = CAPTADOR_USER_ID;
+    destination = '/dashboard/mis-propiedades';
+  }
+
+  cookieStore.set('tenant_id', DEFAULT_TENANT_ID, { path: '/', maxAge: 60 * 60 * 24 * 7 });
+  cookieStore.set('user_id', targetUserId, { path: '/', maxAge: 60 * 60 * 24 * 7 });
+  cookieStore.set('user_role', role, { path: '/', maxAge: 60 * 60 * 24 * 7 });
 
   revalidatePath('/', 'layout');
 
@@ -34,6 +41,7 @@ export async function switchDemoRoleAction(
     data: {
       role,
       userId: targetUserId,
+      redirectUrl: destination,
     },
   };
 }

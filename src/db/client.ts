@@ -573,9 +573,19 @@ export async function getSessionContext(): Promise<TenantContext> {
         ? roleHeader
         : 'owner';
 
+    // Asegurar consistencia de userId con el rol seleccionado
+    let finalUserId = userId;
+    if (userRole === 'captador' && (!finalUserId || finalUserId === DEFAULT_USER_ID)) {
+      finalUserId = CAPTADOR_USER_ID;
+    } else if (userRole === 'agent' && (!finalUserId || finalUserId === DEFAULT_USER_ID)) {
+      finalUserId = AGENT_USER_ID;
+    } else if ((userRole === 'owner' || userRole === 'admin') && (!finalUserId || finalUserId === CAPTADOR_USER_ID || finalUserId === AGENT_USER_ID)) {
+      finalUserId = DEFAULT_USER_ID;
+    }
+
     return {
       tenantId,
-      userId,
+      userId: finalUserId,
       userRole,
     };
   } catch {
